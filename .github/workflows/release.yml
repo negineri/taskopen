@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  release:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: ${{ github.event.repository.name }}
+            asset_name: ${{ github.event.repository.name }}-linux-amd64
+          - os: macos-latest
+            artifact_name: ${{ github.event.repository.name }}
+            asset_name: ${{ github.event.repository.name }}-macos-amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Nim
+        uses: iffy/install-nim@v5
+      - name: Build release
+        run: |
+          make PREFIX=""
+          make DESTDIR="build/taskopen" PREFIX="" install
+          tar -czf ${{ matrix.artifact_name }}.tar.gz -C build taskopen
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ matrix.artifact_name }}.tar.gz
+          asset_name: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
